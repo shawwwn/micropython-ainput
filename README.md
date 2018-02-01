@@ -6,7 +6,7 @@ Asynchronous user input libraries using the MicroPython uasyncio library
 ## uaioinput
 Library for for getting user input inside an uasyncio event-loop
 
-### Usage
+#### Usage
 ```python
 import uasyncio
 from uaioinput import ainput
@@ -15,28 +15,28 @@ print(s)
 ```
 
 To prevent two `ainput()` being called at the same time, a global **lock** is 
-implemented at the module level.
+implemented at the module level.\
 To check **lock** status,
 ```python
 import uaioinput
 print(uaioinput.input_lock.locked)
 ```
 
-### Dependencies
+#### Dependencies
  * [micropython-uasyncio](https://github.com/micropython/micropython-lib/tree/master/uasyncio)
  * [micropython-uasyncio.synchro](https://github.com/micropython/micropython-lib/tree/master/uasyncio.synchro)
 
 
 
 ## uaiorepl
-A simple(or rather dump) REPL console that runs inside an uasyncio event-loop.
-Features are severely limited comparing to the MicroPython one, only standard REPL operations 
-are supported.
+A simple(or rather dump) REPL console that runs inside an uasyncio event-loop.\
+Features are severely limited comparing to the standard MicroPython REPL, 
+only basic repl operations are supported.
 
-NOTE:
+NOTE:\
 `ctrl+b` for manual linebreak
 
-### Usage
+#### Usage
 ```python
 import uasyncio
 import uaiorepl
@@ -45,5 +45,5 @@ loop.call_soon(uaiorepl.start())
 loop.run_forever()
 ```
 
-### Dependencies
+#### Dependencies
  * [micropython-uasyncio](https://github.com/micropython/micropython-lib/tree/master/uasyncio)
