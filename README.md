@@ -47,3 +47,24 @@ loop.run_forever()
 
 #### Dependencies
  * [micropython-uasyncio](https://github.com/micropython/micropython-lib/tree/master/uasyncio)
+
+
+
+## uaiotelnet
+A simple telnet server that runs inside an uasyncio event-loop.\
+Adapted from **cpopp**'s [MicroTelnetServer](https://github.com/cpopp/MicroTelnetServer)
+
+NOTE:\
+Must run concurrently with a `uaiorepl` or `uaioinput` otherwise user input will still be blocked.
+
+#### Usage
+```python
+import uasyncio, uaiotelnet, uaiorepl
+loop = uasyncio.get_event_loop()
+loop.call_soon(uaiotelnet.start())
+loop.call_soon(uaiorepl.start()) # uasyncio repl will process telnet input
+loop.run_forever()
+```
+
+#### Dependencies
+ * [micropython-uasyncio](https://github.com/micropython/micropython-lib/tree/master/uasyncio)
