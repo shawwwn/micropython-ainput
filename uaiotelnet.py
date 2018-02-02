@@ -39,6 +39,7 @@ class TelnetWrapper():
 					else:
 						return readbytes
 				else:
+					self.close()
 					raise
 		return readbytes
 
@@ -56,11 +57,11 @@ class TelnetWrapper():
 					pass
 				else:
 					# something else...propagate the exception
+					self.close()
 					raise
 
 	def close(self):
 		self.socket.close()
-
 
 # On accepting client connection
 async def server(reader, writer):
@@ -68,8 +69,9 @@ async def server(reader, writer):
 
 	if last_client_socket:
 		# close any previous clients
-		uos.dupterm(None)
+		yield uasyncio.IOReadDone(last_client_socket)
 		last_client_socket.close()
+		uos.dupterm(None)
 
 	last_client_socket = writer.s
 	last_client_socket.setblocking(False)
@@ -81,10 +83,25 @@ async def server(reader, writer):
 
 # On receiving client data
 async def client_rx():
+	global last_client_socket
+
 	while True:
 		if last_client_socket!=None:
-			yield uasyncio.IORead(last_client_socket)
-			uos.dupterm_notify(last_client_socket)
+			try:
+				# dirty hack for checking if socket is still connected
+				s=str(last_client_socket)
+				i=s.index('state=')+6
+				if int(s[i:s.index(' ', i)]) != 2:
+					raise
+
+				yield uasyncio.IORead(last_client_socket)
+				uos.dupterm_notify(last_client_socket)
+			except:
+				# clean up
+				print("Telnet client disconnected ...")
+				yield uasyncio.IOReadDone(last_client_socket)
+				last_client_socket = None
+				uos.dupterm(None)
 		else:
 			await uasyncio.sleep(1)
 		await uasyncio.sleep_ms(1)
@@ -99,6 +116,3 @@ async def start(ip="0.0.0.0", port=23):
 	loop.create_task(client_rx())
 
 	print("Telnet server started on {}:{}".format(ip, port))
-
-
-
