@@ -77,7 +77,7 @@ May have some conflicts with `uaiotelnet` due to `uos.dupterm(,index)` not worki
 import uasyncio, uaiowebrepl, uaiorepl
 loop = uasyncio.get_event_loop()
 loop.call_soon(uaiowebrepl.start(ip="0.0.0.0", port=8266, password=123))
-loop.call_soon(uaiorepl.start()) # uasyncio repl will process telnet input
+loop.call_soon(uaiorepl.start()) # uasyncio repl will process webrepl input
 loop.run_forever()
 ```
 
