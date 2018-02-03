@@ -9,53 +9,58 @@ import uos
 import errno
 import uasyncio
 
-last_client_socket = None
+sw_client = None
 loop = None
 
 # On accepting client connection
 async def server(reader, writer):
-	global last_client_socket
+	global sw_client
 
-	if last_client_socket:
-		# close any previous clients
-		yield uasyncio.IOReadDone(last_client_socket)
-		last_client_socket.close()
-		uos.dupterm(None)
-
-	last_client_socket = writer.s
-	last_client_socket.setblocking(False)
 	remote_addr = writer.extra["peername"]
 	print("Telnet connection from: ", remote_addr)
-	last_client_socket.sendall(bytes([255, 252, 34])) # dont allow line mode
-	last_client_socket.sendall(bytes([255, 251, 1])) # turn off local echo
 
-	from .wrapper import TelnetWrapper
-	uos.dupterm(TelnetWrapper(last_client_socket))
+	if sw_client:
+		print("Close previous connection ...")
+		stop()
+
+	from .sw import TelnetWrapper
+	sw_client = TelnetWrapper(writer.s)
+	sw_client.socket.setblocking(False)
+	sw_client.socket.sendall(bytes([255, 252, 34])) # dont allow line mode
+	sw_client.socket.sendall(bytes([255, 251, 1])) # turn off local echo
+	uos.dupterm(sw_client)
 
 # On receiving client data
 async def client_rx():
-	global last_client_socket
+	global sw_client
 
 	while True:
-		if last_client_socket!=None:
+		if sw_client != None:
 			try:
-				# dirty hack for checking if socket is still connected
-				s=str(last_client_socket)
+				# dirty hack to check if socket is still connected
+				s=str(sw_client.socket)
 				i=s.index('state=')+6
 				if int(s[i:s.index(' ', i)]) != 2:
 					raise
 
-				yield uasyncio.IORead(last_client_socket)
-				uos.dupterm_notify(last_client_socket)
+				yield uasyncio.IORead(sw_client.socket)
+				uos.dupterm_notify(sw_client.socket) # dupterm_notify will somehow make a copy of sw_client
 			except:
 				# clean up
 				print("Telnet client disconnected ...")
-				yield uasyncio.IOReadDone(last_client_socket)
-				last_client_socket = None
-				uos.dupterm(None)
+				yield uasyncio.IOReadDone(sw_client.socket)
+				stop()
 		else:
 			await uasyncio.sleep(1)
 		await uasyncio.sleep_ms(1)
+
+def stop():
+	global sw_client
+	if sw_client:
+		sw_client.close()
+		uos.dupterm_notify(sw_client.socket) # deactivate dupterm
+		uos.dupterm(None)
+		sw_client = None
 
 # Add server tasks to asyncio event loop
 # Server will run after loop has been started

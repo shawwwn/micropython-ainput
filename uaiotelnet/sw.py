@@ -1,3 +1,6 @@
+#
+# Telnet Stream Wrapper
+#
 import errno
 
 # Provide necessary functions for dupterm and replace telnet control characters that come in.
@@ -5,8 +8,12 @@ class TelnetWrapper():
 	def __init__(self, socket):
 		self.socket = socket
 		self.discard_count = 0
+		self.closed = False
 
 	def readinto(self, b):
+		if self.closed:
+			return 0 # EOF
+
 		readbytes = 0
 		for i in range(len(b)):
 			try:
@@ -32,11 +39,15 @@ class TelnetWrapper():
 					else:
 						return readbytes
 				else:
+					# something else...propagate the exception
 					self.close()
 					raise
 		return readbytes
 
 	def write(self, data):
+		if self.closed:
+			return
+
 		# we need to write all the data but it's a non-blocking socket
 		# so loop until it's all written eating EAGAIN exceptions
 		while len(data) > 0:
@@ -53,4 +64,5 @@ class TelnetWrapper():
 					raise
 
 	def close(self):
+		self.closed = True
 		self.socket.close()
