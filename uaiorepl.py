@@ -3,8 +3,13 @@ import uio
 import sys
 import uasyncio
 import gc
+try:
+    import esp32
+    from esp32 import UART0 as UART
+except ImportError:
+    from machine import UART
 
-ua = machine.UART(0)
+ua = UART(0)
 ua.init()
 
 async def start(prompt=b">>>> ", cont_prompt=b".... "):

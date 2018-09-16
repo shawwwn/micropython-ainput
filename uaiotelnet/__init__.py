@@ -58,9 +58,9 @@ def stop():
 	global sw_client
 	if sw_client:
 		sw_client.close()
-		uos.dupterm_notify(sw_client.socket) # deactivate dupterm
-		uos.dupterm(None)
+		uos.dupterm_notify(sw_client) # deactivate dupterm
 		sw_client = None
+		uos.dupterm(None)
 
 # Add server tasks to asyncio event loop
 # Server will run after loop has been started

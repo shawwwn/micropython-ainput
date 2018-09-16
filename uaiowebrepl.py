@@ -14,6 +14,7 @@ import uasyncio
 
 client_s = None
 uterm_id = 0 # duplicated uterm id this module has attached to
+is_esp8266 = True if uos.uname()[0]=='esp8266' else False
 
 # On accepting client connection
 async def server(reader, writer):
@@ -45,13 +46,20 @@ async def client_rx():
 		if client_s!=None:
 			try:
 				# dirty hack for checking if socket is still connected
-				s=str(client_s)
-				i=s.index('state=')+6
-				if int(s[i:s.index(' ', i)]) != 2:
-					raise
+				# only for esp8266 with NONOS SDK
+				if is_esp8266:
+					s=str(client_s)
+					i=s.index('state=')+6
+					if int(s[i:s.index(' ', i)]) != 2:
+						raise
 
 				yield uasyncio.IORead(client_s)
-				uos.dupterm_notify(client_s)
+
+				# works on my MicroPython fork (https://github.com/shawwwn/micropython)
+				# dupterm_notify() will return -2 or -3 upon stream error
+				# check: micropython/extmod/uos_dupterm.c
+				if uos.dupterm_notify(client_s) < -1:
+					raise
 			except:
 				# clean up
 				print("WebREPL client disconnected ...")

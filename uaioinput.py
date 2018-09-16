@@ -3,9 +3,14 @@ import uio
 import sys
 import uasyncio
 from uasyncio.synchro import Lock
+try:
+    import esp32
+    from esp32 import UART0 as UART
+except ImportError:
+    from machine import UART
 
 input_lock = Lock() # global lock
-ua = machine.UART(0)
+ua = UART(0)
 ua.init()
 
 async def ainput(prompt=None, password=False):
