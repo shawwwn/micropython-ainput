@@ -15,15 +15,21 @@ import uasyncio
 client_s = None
 uterm_id = 0 # duplicated uterm id this module has attached to
 is_esp8266 = True if uos.uname()[0]=='esp8266' else False
+rx_handler_coro = None
 
 # On accepting client connection
 async def server(reader, writer):
-	global client_s
+	global client_s, rx_handler_coro
 
 	if client_s:
-		# close any previous clients
-		client_s.close()
+		# close previous socket
+		if rx_handler_coro:
+			uasyncio.cancel(rx_handler_coro)
+		await uasyncio.sleep(1) # wait some time for error to trigger in previous socket handler
+		rx_handler_coro = client_rx()
+		loop.create_task(rx_handler_coro)
 		uos.dupterm(None, uterm_id)
+		await uasyncio.sleep_ms(500)
 
 	client_s = writer.s
 	# Blocking is needed for websocket_helper.server_handshake()
@@ -53,7 +59,7 @@ async def client_rx():
 					if int(s[i:s.index(' ', i)]) != 2:
 						raise
 
-				yield uasyncio.IORead(client_s)
+				yield uasyncio.IORead(client_s);
 
 				# works on my MicroPython fork (https://github.com/shawwwn/micropython)
 				# dupterm_notify() will return -2 or -3 upon stream error
@@ -66,7 +72,7 @@ async def client_rx():
 				yield uasyncio.IOReadDone(client_s)
 				stop()
 		else:
-			await uasyncio.sleep(1)
+			await uasyncio.sleep(2)
 		await uasyncio.sleep_ms(1)
 
 def stop():
@@ -82,7 +88,7 @@ def stop():
 # TODO: dupterm(,index) isn't really working in MicroPython as of v1.9.3
 #       uterm must set to 0 unless some upstream works have been done
 async def start(ip="0.0.0.0", port=8266, password=None, uterm=0):
-	global loop, uterm_id
+	global loop, uterm_id, rx_handler_coro
 	uterm_id = uterm
 
 	stop()
@@ -99,4 +105,5 @@ async def start(ip="0.0.0.0", port=8266, password=None, uterm=0):
 
 	loop = uasyncio.get_event_loop()
 	loop.create_task(uasyncio.start_server(server, ip, port))
-	loop.create_task(client_rx())
+	rx_handler_coro = client_rx()
+	loop.create_task(rx_handler_coro)

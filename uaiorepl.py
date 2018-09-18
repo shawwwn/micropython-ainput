@@ -3,6 +3,11 @@
 #
 # Copyright (c) 2018 Shawwwn <shawwwn1@gmai.com>
 #
+# NOTE:
+# For this script to work correctly on ESP32
+# You need to use my fork of MicroPython:
+# https://github.com/shawwwn/micropython
+#
 import machine
 import uio
 import sys
