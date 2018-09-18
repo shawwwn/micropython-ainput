@@ -1,3 +1,8 @@
+#
+# MIT License
+#
+# Copyright (c) 2018 Shawwwn <shawwwn1@gmai.com>
+#
 import machine
 import uio
 import sys
