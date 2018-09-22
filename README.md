@@ -3,10 +3,10 @@ Asynchronous user input libraries using MicroPython [uasyncio](https://github.co
 
 
 
-## uaioinput <esp32(?), esp8266>
+## uaioinput <esp32(**\***), esp8266>
 Library for for getting user input inside uasyncio event-loop
 
-NOTE:\
+NOTE(**\***):\
 For this to work on esp32, you need to use [my fork of micropython](https://github.com/shawwwn/micropython) which incorperates a hack on the UART console.
 
 #### Usage
@@ -30,12 +30,12 @@ print(uaioinput.input_lock.locked)
 
 
 
-## uaiorepl <esp32(?), esp8266>
+## uaiorepl <esp32(**\***), esp8266>
 A simple(dumb) REPL console that runs inside uasyncio event-loop.\
 Features are severely limited comparing to the standard REPL, 
 only basic operations are supported.
 
-NOTE:\
+NOTE(**\***):\
 `ctrl+b` for manual linebreak\
 For this to work on esp32, you need to use [my fork of micropython](https://github.com/shawwwn/micropython) which incorperates a hack on the UART console.
 
@@ -50,12 +50,18 @@ loop.run_forever()
 
 
 
-## uaiotelnet <esp8266>
+## uaiotelnet <esp32(**\***), esp8266>
 Modified telnet server that runs inside uasyncio event-loop.\
 Adapted from **cpopp**'s [MicroTelnetServer](https://github.com/cpopp/MicroTelnetServer)
 
-NOTE:\
+NOTE(**\***):\
 Must run concurrently with a `uaiorepl` or `uaioinput` otherwise user input will still be blocked.
+
+NOTE:\
+If you are using Putty in windows as your telnet client, then you must set the following parameters:\
+* Terminal - Local echo - force off
+* Terminal - Local line editing - force off
+* Connection - Telnet - [UNCHECK] Return key sends Telnet New Line instead of ^M
 
 #### Usage
 ```python
@@ -68,14 +74,13 @@ loop.run_forever()
 
 
 
-## uaiowebrepl <esp32, esp8266>
+## uaiowebrepl <esp32(**\***), esp8266>
 The offical implementation of WebREPL relies on socket interrupt and can be horribly slow.
 This modified WebREPL runs inside uasyncio event-loop and is way faster than the official one.\
 Adapted from [the offical WebREPL for ESP8266](https://github.com/micropython/micropython/blob/master/ports/esp8266/modules/webrepl.py)
 
 NOTE:\
 Must run concurrently with `uaiorepl` or `uaioinput` otherwise user input will still be blocked.
-May have some conflicts with `uaiotelnet` due to `uos.dupterm(,index)` not working properly as of Micropython v1.9.3
 
 #### Usage
 ```python

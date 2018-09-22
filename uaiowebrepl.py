@@ -13,7 +13,6 @@ import _webrepl
 import uasyncio
 
 client_s = None
-uterm_id = 0 # duplicated uterm id this module has attached to
 is_esp8266 = True if uos.uname()[0]=='esp8266' else False
 rx_handler_coro = None
 
@@ -21,14 +20,18 @@ rx_handler_coro = None
 async def server(reader, writer):
 	global client_s, rx_handler_coro
 
+	remote_addr = writer.extra["peername"]
+	print("WebREPL connection from: ", remote_addr)
+
 	if client_s:
 		# close previous socket
 		if rx_handler_coro:
 			uasyncio.cancel(rx_handler_coro)
 		await uasyncio.sleep(1) # wait some time for error to trigger in previous socket handler
 		rx_handler_coro = client_rx()
+		loop = uasyncio.get_event_loop()
 		loop.create_task(rx_handler_coro)
-		uos.dupterm(None, uterm_id)
+		uos.dupterm(None)
 		await uasyncio.sleep_ms(500)
 
 	client_s = writer.s
@@ -40,16 +43,14 @@ async def server(reader, writer):
 	ws = websocket.websocket(client_s)
 	ws = _webrepl._webrepl(ws)
 	client_s.setblocking(False)
-	remote_addr = writer.extra["peername"]
-	print("WebREPL connection from: ", remote_addr)
-	uos.dupterm(ws, uterm_id)
+	uos.dupterm(ws)
 
 # On receiving client data
 async def client_rx():
 	global client_s
 
 	while True:
-		if client_s!=None:
+		if client_s != None:
 			try:
 				# dirty hack for checking if socket is still connected
 				# only for esp8266 with NONOS SDK
@@ -76,8 +77,8 @@ async def client_rx():
 		await uasyncio.sleep_ms(1)
 
 def stop():
-	global client_s, uterm_id
-	uos.dupterm(None, uterm_id)
+	global client_s
+	uos.dupterm(None)
 	if client_s:
 		client_s.close()
 		client_s = None
@@ -85,11 +86,8 @@ def stop():
 
 # Add server tasks to asyncio event loop
 # Server will run after loop has been started
-# TODO: dupterm(,index) isn't really working in MicroPython as of v1.9.3
-#       uterm must set to 0 unless some upstream works have been done
-async def start(ip="0.0.0.0", port=8266, password=None, uterm=0):
-	global loop, uterm_id, rx_handler_coro
-	uterm_id = uterm
+async def start(ip="0.0.0.0", port=8266, password=None):
+	global rx_handler_coro
 
 	stop()
 	if password is None:

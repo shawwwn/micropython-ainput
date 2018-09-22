@@ -10,18 +10,27 @@ import errno
 import uasyncio
 
 sw_client = None
-loop = None
+is_esp8266 = True if uos.uname()[0]=='esp8266' else False
+rx_handler_coro = None
 
 # On accepting client connection
 async def server(reader, writer):
-	global sw_client
+	global sw_client, rx_handler_coro
 
 	remote_addr = writer.extra["peername"]
 	print("Telnet connection from: ", remote_addr)
 
 	if sw_client:
-		print("Close previous connection ...")
-		stop()
+		# close previous socket
+		if rx_handler_coro:
+			uasyncio.cancel(rx_handler_coro)
+		await uasyncio.sleep(1) # wait some time for error to trigger in previous socket handler
+		sw_client = None
+		rx_handler_coro = client_rx()
+		loop = uasyncio.get_event_loop()
+		loop.create_task(rx_handler_coro)
+		uos.dupterm(None)
+		await uasyncio.sleep_ms(500)
 
 	from .sw import TelnetWrapper
 	sw_client = TelnetWrapper(writer.s)
@@ -37,21 +46,28 @@ async def client_rx():
 	while True:
 		if sw_client != None:
 			try:
-				# dirty hack to check if socket is still connected
-				s=str(sw_client.socket)
-				i=s.index('state=')+6
-				if int(s[i:s.index(' ', i)]) != 2:
-					raise
+				# dirty hack for checking if socket is still connected
+				# only for esp8266 with NONOS SDK
+				if is_esp8266:
+					s=str(sw_client.socket)
+					i=s.index('state=')+6
+					if int(s[i:s.index(' ', i)]) != 2:
+						raise
 
 				yield uasyncio.IORead(sw_client.socket)
-				uos.dupterm_notify(sw_client.socket) # dupterm_notify will somehow make a copy of sw_client
+
+				# works on my MicroPython fork (https://github.com/shawwwn/micropython)
+				# dupterm_notify() will return -2 or -3 upon stream error
+				# check: micropython/extmod/uos_dupterm.c
+				if uos.dupterm_notify(sw_client.socket) < -1:
+					raise
 			except:
 				# clean up
 				print("Telnet client disconnected ...")
 				yield uasyncio.IOReadDone(sw_client.socket)
 				stop()
 		else:
-			await uasyncio.sleep(1)
+			await uasyncio.sleep(2)
 		await uasyncio.sleep_ms(1)
 
 def stop():
@@ -65,10 +81,9 @@ def stop():
 # Add server tasks to asyncio event loop
 # Server will run after loop has been started
 async def start(ip="0.0.0.0", port=23):
-	global loop
-
 	loop = uasyncio.get_event_loop()
 	loop.create_task(uasyncio.start_server(server, ip, port))
-	loop.create_task(client_rx())
+	rx_handler_coro = client_rx()
+	loop.create_task(rx_handler_coro)
 
 	print("Telnet server started on {}:{}".format(ip, port))
